@@ -62,21 +62,21 @@ const updateCount = function (done) {
 };
 
 //Get document from db by original_url
-const findByOriginalUrl = function(url, done){
-  ShortUrl.findOne({original_url: url}, function(err, document){
-    if(err) console.error(err)
+const findByOriginalUrl = function (url, done) {
+  ShortUrl.findOne({ original_url: url }, function (err, document) {
+    if (err) console.error(err);
 
-    done(null, document)
-  })
-}
+    done(null, document);
+  });
+};
 //Get document from db by short_url
-const findByShortUrl = function(url, done){
-  ShortUrl.findOne({short_url: url}, function(err, document){
-    if(err) return console.error(err)
-    
-    done(null, document)
-  })
-}
+const findByShortUrl = function (url, done) {
+  ShortUrl.findOne({ short_url: url }, function (err, document) {
+    if (err) return console.error(err);
+
+    done(null, document);
+  });
+};
 
 //function for creating shortUrl and saving it to db
 const createAndSaveShortUrl = function (url, done) {
@@ -97,7 +97,7 @@ const createAndSaveShortUrl = function (url, done) {
         if (err) return console.error(err);
       });
 
-      done(null, document)
+      done(null, document);
     });
   });
 };
@@ -114,27 +114,35 @@ app.get("/api/hello", function (req, res) {
 //POST request for shorturl
 app.post("/api/shorturl", function (req, res) {
   if (validateurl(req.body.url)) {
-    
-    //Find URL in db 
-    findByOriginalUrl(url=req.body.url, function(err, document){
-      if(err) return console.error(err)
-      
-      //If short URL exists in db return it in json
-      if(document){
-        res.json({original_url : url, short_url : document.short_url})
-      }
 
-      //If short URL does not exist in db, create it 
-      else{
-        createAndSaveShortUrl(url, function(err, document){
-          if(err) return console.error(err)
-          
-          //return shortURL in json
-          res.json({original_url: url, short_url: document.short_url})
-        })
-      }
-    })
+    let urlObj = new URL(req.body.url);
 
+    dns.lookup(urlObj.hostname, function (err, address, family) {
+      if (err) {
+        res.json({ error: "invalid url" });
+      } else {
+        
+        //Find URL in db
+        findByOriginalUrl((url = req.body.url), function (err, document) {
+          if (err) return console.error(err);
+
+          //If short URL exists in db return it in json
+          if (document) {
+            res.json({ original_url: url, short_url: document.short_url });
+          }
+
+          //If short URL does not exist in db, create it
+          else {
+            createAndSaveShortUrl(url, function (err, document) {
+              if (err) return console.error(err);
+
+              //return shortURL in json
+              res.json({ original_url: url, short_url: document.short_url });
+            });
+          }
+        });
+      }
+    });
   } else {
     res.json({ error: "invalid url" });
   }
@@ -144,22 +152,22 @@ app.post("/api/shorturl", function (req, res) {
 const validateurl = function (url) {
   try {
     new URL(url);
-  
+
     return true;
   } catch (err) {
     return false;
   }
 };
 
-app.get("/api/:shortUrl", function(req, res){
-  findByShortUrl(req.params.shortUrl, function(err, document){
-    if(err) return console.error(err)
-    
-    if(document){
-      res.redirect(document.original_url)
+app.get("/api/shorturl/:shortUrl", function (req, res) {
+  findByShortUrl(req.params.shortUrl, function (err, document) {
+    if (err) return console.error(err);
+
+    if (document) {
+      res.redirect(document.original_url);
     }
-  })
-})
+  });
+});
 
 app.listen(port, function () {
   console.log(`Listening on port ${port}`);
